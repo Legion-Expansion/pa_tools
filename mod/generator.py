@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 from datetime import datetime
 from shutil import copyfile
-import collections
 import os
 
 from pa_tools.lib import patcher
@@ -91,18 +90,11 @@ def _do_patch(target, patch, destination, loader, out_dir):
     with open(destination_path, 'w') as dest:
         pajson.dump(result_obj, dest)
 
-def process_modinfo(modinfo_path, loader, out_dir):
-    modinfo = collections.OrderedDict([
-        ('identifier', 'no.mod.info.supplied'),
-        ('context', 'client')]
-    )
-
-    print('======= Loading Modinfo =======')
-
-    resolved = loader.resolveFile(modinfo_path)
-    base_modinfo, warnings = pajson.loadf(resolved)
-    for w in warnings:
-        print(w)
+def generate_modinfo(base_modinfo):
+    modinfo = {
+        'identifier' : 'no.mod.info.supplied',
+        'context' : 'client'
+    }
 
     modinfo.update(base_modinfo)
 
@@ -110,9 +102,4 @@ def process_modinfo(modinfo_path, loader, out_dir):
     modinfo['date'] = datetime.utcnow().strftime("%Y-%m-%d")
     modinfo['signature'] = modinfo.get('signature', ' ')
 
-    print('identifier:', modinfo['identifier'])
-    print('     build:', modinfo['build'])
-    print('-------------------------------')
-
-    destination_path = _join(out_dir, 'modinfo.json')
-    os.makedirs(os.path.dirname(destination_path), exist_ok=True)
+    return modinfo
