@@ -5,9 +5,12 @@ from datetime import datetime
 import sys
 import os
 
-from pa_tools.lib import patcher
-from pa_tools.pa.paths import PA_MEDIA_DIR
-from pa_tools.pa.paths import PA_VERSION
+from ..pa.paths import PA_MEDIA_DIR
+
+import patcher
+import loader
+import loader
+import utils
 
 # initialise some global vars
 _options = {}
