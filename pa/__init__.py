@@ -7,6 +7,11 @@ def _join(path1, path2):
         return None
     return join(path1, path2.strip("/"))
 
+
+def _normalize(path):
+    return path.replace('\\', '/')
+
+
 class pafs:
     def __init__(self, rootPath):
         self.mounts = [('/', rootPath)]
@@ -14,13 +19,15 @@ class pafs:
     def mount(self, dest, path):
         self.mounts.insert(0, (dest, path))
 
+
     def unmount(self, dest):
         for mnt, path in self.mounts:
             if mnt == dest:
                 self.mounts.remove((mnt, path))
                 return
 
-    def resolveFile(self, path):
+    def resolveFile(self, path, debug=False):
+        path = _normalize(path)
         for i in range(len(self.mounts)):
             mounts = self.mounts[i:]
 
@@ -34,6 +41,9 @@ class pafs:
 
             if isfile(file_path):
                 return normpath(file_path)
+            elif debug:
+                print ('[pafs] NOT FILE:', file_path, ' with mounts: ')
+                list(map(print, mounts))
 
         return None
 
