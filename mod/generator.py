@@ -61,36 +61,6 @@ def process_changes(changes, loader, out_dir):
             for target in change['target']:
                 _do_patch(target, change['patch'], target, loader, out_dir)
 
-
-def process_modinfo(modinfo_path, loader, out_dir):
-    modinfo = collections.OrderedDict([
-        ('identifier', 'no.mod.info.supplied'),
-        ('context', 'client')]
-    )
-
-    print('======= Loading Modinfo =======')
-
-    resolved = loader.resolveFile(modinfo_path)
-    base_modinfo, warnings = pajson.loadf(resolved)
-    for w in warnings:
-        print(w)
-
-    modinfo.update(base_modinfo)
-
-    modinfo['build'] = str(PA_VERSION)
-    modinfo['date'] = datetime.utcnow().strftime("%Y-%m-%d")
-    modinfo['signature'] = modinfo.get('signature', ' ')
-
-    print('identifier:', modinfo['identifier'])
-    print('     build:', modinfo['build'])
-    print('-------------------------------')
-
-    destination_path = _join(out_dir, 'modinfo.json')
-    os.makedirs(os.path.dirname(destination_path), exist_ok=True)
-    with open(destination_path, 'w', newline='\n') as dest:
-        pajson.dump(modinfo, dest, indent=2)
-
-
 #####################################
 # Helper Methods
 #####################################
@@ -122,46 +92,35 @@ def _do_patch(target, patch, destination, loader, out_dir):
     for w in warnings:
         print(w)
 
-    custom_ops = {
-        'scale_effect' : _scale_effect_handler
-    }
+    result_obj = patcher.apply_patch(target_obj, patch)
 
-    result_obj = patcher.apply_patch(target_obj, patch, custom_ops)
-
-    with open(destination_path, 'w', newline='\n') as dest:
+    with open(destination_path, 'w') as dest:
         pajson.dump(result_obj, dest, indent=2)
 
-###################################### patcher extensions ##############################
-def _scale_effect_handler(obj, operation):
-    to_scale = [
-        'sizeX', 'sizeY',
-        'sizeRangeX', 'sizeRangeY',
-        'velocity', 'velocityRange',
-        'offsetX', 'offsetY', 'offsetZ',
-        'offsetRangeX', 'offsetRangeY', 'offsetRangeZ',
-        'accelX', 'accelY', 'accelZ',
+def process_modinfo(modinfo_path, loader, out_dir):
+    modinfo = collections.OrderedDict([
+        ('identifier', 'no.mod.info.supplied'),
+        ('context', 'client')]
+    )
 
-        'gravity',
-        'snapToSurfaceOffset'
-    ]
+    print('======= Loading Modinfo =======')
 
-    scale = operation["value"]
+    resolved = loader.resolveFile(modinfo_path)
+    base_modinfo, warnings = pajson.loadf(resolved)
+    for w in warnings:
+        print(w)
 
-    for i, emitter in enumerate(obj['emitters']):
-        for key in to_scale:
-            if key in emitter:
-                try:
-                    if isinstance(emitter[key], (float, int)):
-                        obj['emitters'][i][key] *= scale
-                    elif isinstance(emitter[key], list):
-                        for j, value in enumerate(emitter[key]):
-                            obj['emitters'][i][key][j][1] *= scale
-                    elif isinstance(emitter[key], dict):
-                        for j, value in enumerate(emitter[key]['keys']):
-                            obj['emitters'][i][key]['keys'][j][1] *= scale
-                    else:
-                        print('Unexpected "' + key + '" formet:', emitter[key])
-                except:
-                    print('Exception:', key, obj['emitters'][i][key])
-                    raise
-    return obj
+    modinfo.update(base_modinfo)
+
+    modinfo['build'] = str(PA_VERSION)
+    modinfo['date'] = datetime.utcnow().strftime("%Y-%m-%d")
+    modinfo['signature'] = modinfo.get('signature', ' ')
+
+    print('identifier:', modinfo['identifier'])
+    print('     build:', modinfo['build'])
+    print('-------------------------------')
+
+    destination_path = _join(out_dir, 'modinfo.json')
+    os.makedirs(os.path.dirname(destination_path), exist_ok=True)
+    with open(destination_path, 'w') as dest:
+        pajson.dump(modinfo, dest, indent=2)
