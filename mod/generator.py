@@ -46,15 +46,9 @@ def process_changes(changes, loader, out_dir):
         # we have a single target
         if isinstance(change['target'], str):
             target = change['target']
-            destinations = change.get('destination', target)
+            destination = change.get('destination', target)
 
-            # but potentially multiple destinations
-            if isinstance(destinations, str):
-                destinations = [destinations]
-
-            for destination in destinations:
-                _do_patch(target, change['patch'], destination, loader, out_dir)
-
+            _do_patch(target, change['patch'], destination, loader, out_dir)
 
         # list of targets
         if isinstance(change['target'], list):
@@ -95,7 +89,7 @@ def _do_patch(target, patch, destination, loader, out_dir):
     result_obj = patcher.apply_patch(target_obj, patch)
 
     with open(destination_path, 'w') as dest:
-        pajson.dump(result_obj, dest, indent=2)
+        pajson.dump(result_obj, dest)
 
 def process_modinfo(modinfo_path, loader, out_dir):
     modinfo = collections.OrderedDict([
@@ -122,5 +116,3 @@ def process_modinfo(modinfo_path, loader, out_dir):
 
     destination_path = _join(out_dir, 'modinfo.json')
     os.makedirs(os.path.dirname(destination_path), exist_ok=True)
-    with open(destination_path, 'w') as dest:
-        pajson.dump(modinfo, dest, indent=2)
