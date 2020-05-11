@@ -2,7 +2,6 @@
 from datetime import datetime
 from shutil import copyfile
 import collections
-import sys
 import os
 
 from pa_tools.lib import patcher
@@ -21,7 +20,7 @@ def process_changes(changes, loader, out_dir):
 
             if from_file == None:
                 print ("\n!! ERROR: Not Found '" + change['from_file'] + "'\n")
-                sys.exit(1)
+                continue
 
             print('==== loading:', from_file)
             changes, warnings = pajson.loadf(from_file)
