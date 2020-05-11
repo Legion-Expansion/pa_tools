@@ -81,8 +81,6 @@ def process_modinfo(modinfo_path, loader, out_dir):
     with open(destination_path, 'w', newline='\n') as dest:
         pajson.dump(modinfo, dest, indent=2)
 
-    return modinfo
-
 def update_modinfo(base_modinfo):
     modinfo = collections.OrderedDict([
         ('identifier', 'no.mod.info.supplied'),
