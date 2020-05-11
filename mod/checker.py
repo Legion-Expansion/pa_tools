@@ -1,7 +1,5 @@
 from collections import OrderedDict
-
 from pa_tools.pa import pajson
-from pa_tools.pa.paths import PA_MEDIA_DIR
 
 from posixpath import normpath
 
@@ -139,7 +137,7 @@ def _walk_json(mod_report, loader, visited, file_path, referenced_by):
             _walk_json(mod_report, loader, visited, file, resolved_file)
 
 def check_mod(mod_path):
-    from pa_tools.pa import pafs
+    from pa.load import Loader
     from os.path import join, dirname
 
     mod_report = ModReport(mod_path)
@@ -149,7 +147,7 @@ def check_mod(mod_path):
         mod_report.addInfoIssue('FATAL: Could not find modinfo.json')
         return mod_report
 
-    loader = pafs(mod_report.mod_root)
+    loader = Loader(mod_report.mod_root)
 
     modinfo_path = loader.resolveFile('/modinfo.json')
     if modinfo_path is None:
@@ -161,12 +159,10 @@ def check_mod(mod_path):
         return mod_report
 
     # construct loader for checking files
+    from pa.paths import PA_MEDIA_DIR
 
-    loader = pafs(PA_MEDIA_DIR)
-    is_classic_only = mod_report.modinfo.get('classicOnly', False)
-    is_titans_only = mod_report.modinfo.get('titansOnly', False)
-    if is_titans_only or not is_classic_only:
-        loader.mount('/pa', '/pa_ex1')
+    loader = Loader(PA_MEDIA_DIR)
+    loader.mount('/pa', '/pa_ex1')
     loader.mount('/', mod_report.mod_root)
 
     find_missing_files(mod_report, loader)
@@ -254,7 +250,7 @@ def check_modinfo(mod_report, modinfo_path, loader):
     elif category is not None:
         mod_report.addInfoIssue('ERROR: "category" field must be an array of strings.')
 
-
+    
     # context - string - mandatory, server or client
     context = modinfo.get('context', None)
     if context not in ['client', 'server']:
@@ -292,11 +288,8 @@ def _walk_obj(obj):
 
 
 def _find_mod_root(mod_path):
-    from os.path import join, dirname, isfile
+    from os.path import join, dirname
     from glob import glob
-
-    if isfile(join(mod_path, 'modinfo.json')):
-        return mod_path
 
     glob_result = glob(join(mod_path, '**','modinfo.json'), recursive=True)
 

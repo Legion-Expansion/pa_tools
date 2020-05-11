@@ -159,10 +159,10 @@ def _parse_number(tokens, index):
         value = int(tok.value)
     except ValueError as e:
         try:
-            value = float(tok.value)
+            value = decimal.Decimal(tok.value)
         except ValueError as e:
             try:
-                value = decimal.Decimal(tok.value)
+                value = float(tok.value)
             except ValueError as e:
                 raise ValueError(_error_near(tokens, index, 'error', 'could not convert string to float'))
 
@@ -324,70 +324,8 @@ def load(f):
         return loads(f.read(), f.name)
 ###############################################################################
 
-################ Dumping json objects
-from decimal import Decimal
-class _fake_float(float):
-    def __init__(self, value):
-        self._value = value
-    def __repr__(self):
-        d = self._value
-        d = d.quantize(Decimal('1.')) if d == d.to_integral() else d.normalize()
-        return str(d)
-def _json_encoder_default_handler(o):
-    if isinstance(o, Decimal):
-        return _fake_float(o)
-    raise TypeError(repr(o) + ' is not JSON serializable')
-
-def dump(obj, file, **kwargs):
-    return json.dump(obj, file, default=_json_encoder_default_handler, **kwargs)
-
-def dumps(obj, **kwargs):
-    return json.dumps(obj, default=_json_encoder_default_handler, **kwargs)
-
-def _print_obj(obj, level=1, indent=0, **kwargs):
-    ret = ''
-
-    spacer = ('\n' if indent > 0 else '') + ' ' * level * indent
-
-    separator = ','
-
-    if isinstance(obj, list):
-        if level > 2:
-            ret = json.dumps(obj, default=_json_encoder_default_handler, **kwargs, indent=None, separators=(', ', ': '))
-        else:
-            ret += '['
-
-            ret += separator.join([spacer + _print_obj(x, level=level+1, indent=indent, **kwargs) for x in obj])
-
-            if len(obj) > 0:
-                ret += spacer[:-indent]
-
-            ret += ']'
-
-    elif isinstance(obj, dict):
-        ret += '{'
-
-        ret += separator.join([spacer + '"' + k + '"' + ': ' + _print_obj(v, level=level+1, indent=indent, **kwargs) for k, v in obj.items()])
-
-        if len(obj) > 0:
-            ret += spacer[:-indent]
-
-        ret += '}'
-
-    else:
-        ret = json.dumps(obj, default=_json_encoder_default_handler, **kwargs)
-
-    return ret
-
-
-def dumps_effect(obj, **kwargs):
-    return _print_obj(obj, **kwargs)
-
-def dump_effect(obj, file, **kwargs):
-    return print(_print_obj(obj, **kwargs), file=file)
-
-
-
+dump = json.dump
+dumps = json.dumps
 
 # import sys
 # import loader
