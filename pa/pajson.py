@@ -344,6 +344,10 @@ def dump(obj, file, **kwargs):
 def dumps(obj, **kwargs):
     return json.dumps(obj, default=_json_encoder_default_handler, **kwargs)
 
+def dumpf(obj, file_name, **kwargs):
+    with open(file_name, "w", encoding="utf-8", newline='\n') as file:
+        return json.dump(obj, file, default=_json_encoder_default_handler, **kwargs)
+
 def _print_obj(obj, level=1, indent=0, **kwargs):
     ret = ''
 
@@ -386,7 +390,9 @@ def dumps_effect(obj, **kwargs):
 def dump_effect(obj, file, **kwargs):
     return print(_print_obj(obj, **kwargs), file=file)
 
-
+def dumpf_effect(obj, file_name, **kwargs):
+    with open(file_name, "w", encoding="utf-8", newline='\n') as file:
+        return dump_effect(obj, file, **kwargs)
 
 
 # import sys
