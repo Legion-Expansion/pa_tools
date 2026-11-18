@@ -144,7 +144,11 @@ def _parse_array(tokens, index):
 #################### matches a string ##########################
 def _parse_string(tokens, index):
     tok, index = _token_consume_or_fail(tokens, index, 'STRING')
-    return bytes(tok.value[1:-1], "utf-8").decode('unicode_escape'), index
+    try:
+        return json.loads(tok.value, strict=False), index
+    except json.JSONDecodeError as e:
+        # ValueError, not TypeError: loads() turns a TypeError into an empty object
+        raise ValueError(_error_near(tokens, index, 'error', 'invalid string: ' + e.msg)) from None
 
 #################### matches a number ##########################
 def _parse_number(tokens, index):
