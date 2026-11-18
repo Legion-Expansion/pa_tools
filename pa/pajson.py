@@ -149,9 +149,7 @@ def _parse_string(tokens, index):
     try:
         return _string_decoder.decode(tok.value), index
     except json.JSONDecodeError as e:
-        breaks = list(_line_break.finditer(tok.value, 0, e.pos))
-        line = tok.line + len(breaks)
-        column = e.pos - breaks[-1].end() + 1 if breaks else tok.column + e.pos
+        line, column = _advance(tok.line, tok.column, tok.value[:e.pos])
         where = tok._replace(line=line, column=column, length=1)
         message = 'invalid string: ' + e.msg.removesuffix(' starting at')
         # ValueError, not TypeError: loads() turns a TypeError into an empty object
@@ -195,6 +193,12 @@ def _parse_null(tokens, index):
 _LINE_BREAKS = '\n\r\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029'
 _line_break = re.compile('\r\n|[' + _LINE_BREAKS + ']')
 
+def _advance(line, column, text):
+    breaks = list(_line_break.finditer(text))
+    if breaks:
+        return line + len(breaks), len(text) - breaks[-1].end() + 1
+    return line, column + len(text)
+
 ################################################################################
 ##### Tokenises an input string ################################################
 ## results are yielded as a generator
@@ -227,10 +231,9 @@ def _tokenize_string(file_string):
         yield _colorise_token(kind, value, line, column)
 
         # compute new line and column
-        breaks = list(_line_break.finditer(value))
-        if breaks:
-            line += len(breaks)
-            column = len(value) - breaks[-1].end() + 1
+        # only these token kinds can hold a line break
+        if kind in ('NEWLINE', 'STRING', 'MLCOMMENT'):
+            line, column = _advance(line, column, value)
         else:
             column += len(value)
 
