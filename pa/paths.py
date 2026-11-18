@@ -49,7 +49,7 @@ def _find_media_dir():
         with open(log_file) as log:
             for line in log:
                 # Both UI backends log the media directory as the root mount; CEF logs no Coherent host dir.
-                m = re.search(r'INFO Mounting (.+?)[\\/]* as /\s*$', line)
+                m = re.search(r'INFO Mounting (.+) as /\s*$', line)
                 if m:
                     path = os.path.normpath(m.group(1))
                     if os.path.isdir(path):
