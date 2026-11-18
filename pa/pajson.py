@@ -41,7 +41,7 @@ def _error_near(tokens, index, type, message):
             preview += line_format.format(str(i), _colored_file_lines[i - 1])
 
         if i == tok.line:
-            preview += line_format.format('', re.sub(r'[^\t]', ' ', _file_lines[tok.line - 1][0:tok.column-1]) + bcolors.WHITE + '^' + bcolors.ENDC + bcolors.LIGHT_GRAY +(tok.length - 1) * '~' + ' ' + message + bcolors.ENDC)
+            preview += line_format.format('', re.sub(r'\S', ' ', _file_lines[tok.line - 1][0:tok.column-1]) + bcolors.WHITE + '^' + bcolors.ENDC + bcolors.LIGHT_GRAY +(tok.length - 1) * '~' + ' ' + message + bcolors.ENDC)
 
 
     # line one: error source (<file>:<line>:<column> <message>)
@@ -149,8 +149,9 @@ def _parse_string(tokens, index):
     try:
         return _string_decoder.decode(tok.value), index
     except json.JSONDecodeError as e:
-        line = tok.line + e.lineno - 1
-        column = tok.column + e.colno - 1 if e.lineno == 1 else e.colno
+        breaks = list(_line_break.finditer(tok.value, 0, e.pos))
+        line = tok.line + len(breaks)
+        column = e.pos - breaks[-1].end() + 1 if breaks else tok.column + e.pos
         where = tok._replace(line=line, column=column, length=1)
         message = 'invalid string: ' + e.msg.removesuffix(' starting at')
         # ValueError, not TypeError: loads() turns a TypeError into an empty object
@@ -189,6 +190,11 @@ def _parse_null(tokens, index):
     return None, index
 
 
+# The line breaks of str.splitlines(). The line count, the error preview and the
+# end of a // comment use them; a string keeps them as text.
+_LINE_BREAKS = '\n\r\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029'
+_line_break = re.compile('\r\n|[' + _LINE_BREAKS + ']')
+
 ################################################################################
 ##### Tokenises an input string ################################################
 ## results are yielded as a generator
@@ -200,10 +206,10 @@ def _tokenize_string(file_string):
         ('BOOL',        r'true|false'),                              # true or false
         ('NULL',        r'null'),                                    # just null
         ('PUNCUATION',  r'[{}\[\],:]'),                              # puncuation characters
-        ('SLCOMMENT',   r'//[^\n\x0b\x0c\x1c-\x1e\x85\u2028\u2029]*'), # single-line comment  //, ended by any break str.splitlines() finds
+        ('SLCOMMENT',   '//[^' + _LINE_BREAKS + ']*'),                   # single-line comment  //
         ('MLCOMMENT',   r'/\*(?:\*[^/]|[^*])*\*/'),                  # multi-line comment  /*  */
-        ('NEWLINE',     r'\n'),                                      # newline
-        ('WHITESPACE',  r'[^\S\n]+'),                                # whitespace
+        ('NEWLINE',     _line_break.pattern),                        # newline
+        ('WHITESPACE',  r'[^\S' + _LINE_BREAKS + ']+'),              # whitespace
         ('UNKNOWN',     r'.'),                                       # Any other character
     ]
     # join regexes
@@ -221,11 +227,12 @@ def _tokenize_string(file_string):
         yield _colorise_token(kind, value, line, column)
 
         # compute new line and column
-        last_line_length = len(value) - value.rfind('\n') - 1
-        column += last_line_length
-        if '\n' in value:
-            column = last_line_length + 1
-        line += value.count('\n')
+        breaks = list(_line_break.finditer(value))
+        if breaks:
+            line += len(breaks)
+            column = len(value) - breaks[-1].end() + 1
+        else:
+            column += len(value)
 
     # extra special end of file token
     yield _colorise_token('EOF', ' ', line, column)
@@ -293,15 +300,15 @@ def loads(file_string, file_source=''):
     _warnings = []
     _file_source = file_source
 
-    # not splitlines(): it also splits at U+2028, U+0085 and others, which can be in a string
-    file_string = file_string.replace('\r\n', '\n').replace('\r', '\n').rstrip('\n')
-    _file_lines = file_string.split('\n')
+    # split for the line numbers and the preview only: a string keeps its line breaks
+    file_string = file_string.rstrip(_LINE_BREAKS)
+    _file_lines = file_string.splitlines()
 
     try:
         tokens = list(_tokenize_string(file_string))
 
         # get preview line again, but this time after colorising the tokens
-        _colored_file_lines = (''.join(map(lambda tok: tok.cvalue, tokens)) + bcolors.ENDC).split('\n')
+        _colored_file_lines = (''.join(map(lambda tok: tok.cvalue, tokens)) + bcolors.ENDC).splitlines()
 
         # import pdb; pdb.set_trace()
         obj, index = _parse_value(tokens)
