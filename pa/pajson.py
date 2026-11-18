@@ -148,9 +148,19 @@ def _parse_array(tokens, index):
     return obj, index
 
 #################### matches a string ##########################
+_string_decoder = json.JSONDecoder(strict=False)
+
 def _parse_string(tokens, index):
     tok, index = _token_consume_or_fail(tokens, index, 'STRING')
-    return bytes(tok.value[1:-1], "utf-8").decode('unicode_escape'), index
+    try:
+        return _string_decoder.decode(tok.value), index
+    except json.JSONDecodeError as e:
+        line = tok.line + e.lineno - 1
+        column = tok.column + e.colno - 1 if e.lineno == 1 else e.colno
+        where = tok._replace(line=line, column=column, length=1)
+        message = 'invalid string: ' + e.msg.removesuffix(' starting at')
+        # ValueError, not TypeError: loads() turns a TypeError into an empty object
+        raise ValueError(_error_near([where], 0, 'error', message)) from None
 
 #################### matches a number ##########################
 def _parse_number(tokens, index):
