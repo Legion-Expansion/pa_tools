@@ -311,7 +311,7 @@ def loads(file_string, file_source=''):
 
         # comment for comment symmetry
         return obj, _warnings
-    except TypeError as e:
+    except (TypeError, ValueError) as e:
         raise ParseError(str(e), _warnings) from None
 
 def pretty_print():

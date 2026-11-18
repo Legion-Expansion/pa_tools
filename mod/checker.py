@@ -111,10 +111,9 @@ def _line(string=''): return string + '\n'
 # A file that does not parse is a JSON issue in the report, not a stop
 def _load_json(file_path):
     try:
-        with open(file_path, 'r', encoding='utf-8') as file:
-            return pajson.load(file)
+        return pajson.loadf(file_path)
     except pajson.ParseError as error:
-        return {}, error.warnings + [str(error)]
+        return None, error.warnings + [str(error)]
 
 def find_missing_files(mod_report, loader):
     visited = set()
