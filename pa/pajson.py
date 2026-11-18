@@ -41,7 +41,7 @@ def _error_near(tokens, index, type, message):
             preview += line_format.format(str(i), _colored_file_lines[i - 1])
 
         if i == tok.line:
-            preview += line_format.format('', re.sub(r'\S', ' ', _file_lines[tok.line - 1][0:tok.column-1]) + bcolors.WHITE + '^' + bcolors.ENDC + bcolors.LIGHT_GRAY +(tok.length - 1) * '~' + ' ' + message + bcolors.ENDC)
+            preview += line_format.format('', re.sub(r'[^\t]', ' ', _file_lines[tok.line - 1][0:tok.column-1]) + bcolors.WHITE + '^' + bcolors.ENDC + bcolors.LIGHT_GRAY +(tok.length - 1) * '~' + ' ' + message + bcolors.ENDC)
 
 
     # line one: error source (<file>:<line>:<column> <message>)
@@ -200,7 +200,7 @@ def _tokenize_string(file_string):
         ('BOOL',        r'true|false'),                              # true or false
         ('NULL',        r'null'),                                    # just null
         ('PUNCUATION',  r'[{}\[\],:]'),                              # puncuation characters
-        ('SLCOMMENT',   r'//[^\n]*'),                                # single-line comment  //
+        ('SLCOMMENT',   r'//[^\n\x0b\x0c\x1c-\x1e\x85\u2028\u2029]*'), # single-line comment  //, ended by any break str.splitlines() finds
         ('MLCOMMENT',   r'/\*(?:\*[^/]|[^*])*\*/'),                  # multi-line comment  /*  */
         ('NEWLINE',     r'\n'),                                      # newline
         ('WHITESPACE',  r'[^\S\n]+'),                                # whitespace
@@ -294,7 +294,7 @@ def loads(file_string, file_source=''):
     _file_source = file_source
 
     # not splitlines(): it also splits at U+2028, U+0085 and others, which can be in a string
-    file_string = re.sub(r'\r\n?', '\n', file_string).rstrip('\n')
+    file_string = file_string.replace('\r\n', '\n').replace('\r', '\n').rstrip('\n')
     _file_lines = file_string.split('\n')
 
     try:
