@@ -210,7 +210,7 @@ def _tokenize_string(file_string):
         ('BOOL',        r'true|false'),                              # true or false
         ('NULL',        r'null'),                                    # just null
         ('PUNCUATION',  r'[{}\[\],:]'),                              # puncuation characters
-        ('SLCOMMENT',   '//[^' + _LINE_BREAKS + ']*'),                   # single-line comment  //
+        ('SLCOMMENT',   '//[^' + _LINE_BREAKS + ']*'),               # single-line comment  //
         ('MLCOMMENT',   r'/\*(?:\*[^/]|[^*])*\*/'),                  # multi-line comment  /*  */
         ('NEWLINE',     _line_break.pattern),                        # newline
         ('WHITESPACE',  r'[^\S' + _LINE_BREAKS + ']+'),              # whitespace
