@@ -293,15 +293,15 @@ def loads(file_string, file_source=''):
     _warnings = []
     _file_source = file_source
 
-    file_string = file_string.rstrip('\n')
-    _file_lines = file_string.splitlines()
-    file_string = '\n'.join(_file_lines)
+    # not splitlines(): it also splits at U+2028, U+0085 and others, which can be in a string
+    file_string = re.sub(r'\r\n?', '\n', file_string).rstrip('\n')
+    _file_lines = file_string.split('\n')
 
     try:
         tokens = list(_tokenize_string(file_string))
 
         # get preview line again, but this time after colorising the tokens
-        _colored_file_lines = (''.join(map(lambda tok: tok.cvalue, tokens)) + bcolors.ENDC).splitlines()
+        _colored_file_lines = (''.join(map(lambda tok: tok.cvalue, tokens)) + bcolors.ENDC).split('\n')
 
         # import pdb; pdb.set_trace()
         obj, index = _parse_value(tokens)
