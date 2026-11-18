@@ -152,7 +152,7 @@ def _parse_string(tokens, index):
         line = tok.line + e.lineno - 1
         column = tok.column + e.colno - 1 if e.lineno == 1 else e.colno
         where = tok._replace(line=line, column=column, length=1)
-        message = 'invalid string: %s: line %d column %d' % (e.msg, line, column)
+        message = 'invalid string: ' + e.msg.removesuffix(' starting at')
         # ValueError, not TypeError: loads() turns a TypeError into an empty object
         raise ValueError(_error_near([where], 0, 'error', message)) from None
 
