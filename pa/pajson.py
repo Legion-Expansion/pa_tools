@@ -5,6 +5,12 @@ import json
 import re
 
 Token = collections.namedtuple('Token', ['type', 'value', 'line', 'column', 'length', 'cvalue'])
+
+class ParseError(ValueError):
+    def __init__(self, message, warnings):
+        super().__init__(message)
+        self.warnings = list(warnings)
+
 ################## KNOWN ISSUES
 # Multiline comments with newline characters messes with the error preview
 
@@ -300,13 +306,13 @@ def loads(file_string, file_source=''):
 
         # check to make sure we have either an object or array as the root value
         if not isinstance(obj, dict) and not isinstance(obj, list):
-            raise TypeError('Root level value must be object or array.')
+            _, index = _token_next(tokens, -1)
+            raise TypeError(_error_near(tokens, index, 'error', 'root level value must be object or array'))
 
         # comment for comment symmetry
         return obj, _warnings
     except TypeError as e:
-
-        return {}, _warnings + [str(e)]
+        raise ParseError(str(e), _warnings) from None
 
 def pretty_print():
     print ('\n'.join(_colored_file_lines))

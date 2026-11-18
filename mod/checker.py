@@ -108,6 +108,14 @@ class ModReport:
 def _make_heading(heading, underline_character): return heading + '\n' + underline_character * len(heading) + '\n'
 def _line(string=''): return string + '\n'
 
+# A file that does not parse is a JSON issue in the report, not a stop
+def _load_json(file_path):
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            return pajson.load(file)
+    except pajson.ParseError as error:
+        return {}, error.warnings + [str(error)]
+
 def find_missing_files(mod_report, loader):
     visited = set()
     file_path = '/pa/units/unit_list.json'
@@ -127,8 +135,7 @@ def _walk_json(mod_report, loader, visited, file_path, referenced_by):
     if not file_path.endswith('.json') and not file_path.endswith('.pfx'):
         return
 
-    with open(resolved_file, 'r', encoding='utf-8') as file:
-       obj, warnings = pajson.load(file)
+    obj, warnings = _load_json(resolved_file)
 
     if len(warnings) > 0:
         mod_report.addJsonIssue(file_path, warnings)
@@ -174,8 +181,7 @@ def check_mod(mod_path):
     return mod_report
 
 def check_modinfo(mod_report, modinfo_path, loader):
-    with open(modinfo_path, 'r', encoding='utf-8') as file:
-       modinfo, warnings = pajson.load(file)
+    modinfo, warnings = _load_json(modinfo_path)
     mod_report.addJsonIssue(modinfo_path, warnings)
 
     mandatory_fields = [
