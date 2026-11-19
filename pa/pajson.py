@@ -5,6 +5,12 @@ import json
 import re
 
 Token = collections.namedtuple('Token', ['type', 'value', 'line', 'column', 'length', 'cvalue'])
+
+class ParseError(ValueError):
+    def __init__(self, message, warnings):
+        super().__init__(message)
+        self.warnings = list(warnings)
+
 ################## KNOWN ISSUES
 # Multiline comments with newline characters messes with the error preview
 
@@ -152,7 +158,6 @@ def _parse_string(tokens, index):
         line, column = _advance(tok.line, tok.column, tok.value[:e.pos])
         where = tok._replace(line=line, column=column, length=1)
         message = 'invalid string: ' + e.msg.removesuffix(' starting at')
-        # ValueError, not TypeError: loads() turns a TypeError into an empty object
         raise ValueError(_error_near([where], 0, 'error', message)) from None
 
 #################### matches a number ##########################
@@ -320,13 +325,13 @@ def loads(file_string, file_source=''):
 
         # check to make sure we have either an object or array as the root value
         if not isinstance(obj, dict) and not isinstance(obj, list):
-            raise TypeError('Root level value must be object or array.')
+            root, _ = _token_next(tokens, -1)
+            raise TypeError(_error_near([root._replace(length=1)], 0, 'error', 'root level value must be object or array'))
 
         # comment for comment symmetry
         return obj, _warnings
-    except TypeError as e:
-
-        return {}, _warnings + [str(e)]
+    except (TypeError, ValueError) as e:
+        raise ParseError(str(e), _warnings) from None
 
 def pretty_print():
     print ('\n'.join(_colored_file_lines))
