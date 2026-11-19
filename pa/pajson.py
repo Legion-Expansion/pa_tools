@@ -325,8 +325,8 @@ def loads(file_string, file_source=''):
 
         # check to make sure we have either an object or array as the root value
         if not isinstance(obj, dict) and not isinstance(obj, list):
-            _, index = _token_next(tokens, -1)
-            raise TypeError(_error_near(tokens, index, 'error', 'root level value must be object or array'))
+            root, _ = _token_next(tokens, -1)
+            raise TypeError(_error_near([root._replace(length=1)], 0, 'error', 'root level value must be object or array'))
 
         # comment for comment symmetry
         return obj, _warnings
