@@ -155,8 +155,7 @@ def _parse_string(tokens, index):
     try:
         return _string_decoder.decode(tok.value), index
     except json.JSONDecodeError as e:
-        line = tok.line + e.lineno - 1
-        column = tok.column + e.colno - 1 if e.lineno == 1 else e.colno
+        line, column = _advance(tok.line, tok.column, tok.value[:e.pos])
         where = tok._replace(line=line, column=column, length=1)
         message = 'invalid string: ' + e.msg.removesuffix(' starting at')
         raise ValueError(_error_near([where], 0, 'error', message)) from None
@@ -194,6 +193,17 @@ def _parse_null(tokens, index):
     return None, index
 
 
+# The line breaks of str.splitlines(). The line count, the error preview and the
+# end of a // comment use them; a string keeps them as text.
+_LINE_BREAKS = '\n\r\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029'
+_line_break = re.compile('\r\n|[' + _LINE_BREAKS + ']')
+
+def _advance(line, column, text):
+    breaks = list(_line_break.finditer(text))
+    if breaks:
+        return line + len(breaks), len(text) - breaks[-1].end() + 1
+    return line, column + len(text)
+
 ################################################################################
 ##### Tokenises an input string ################################################
 ## results are yielded as a generator
@@ -205,10 +215,10 @@ def _tokenize_string(file_string):
         ('BOOL',        r'true|false'),                              # true or false
         ('NULL',        r'null'),                                    # just null
         ('PUNCUATION',  r'[{}\[\],:]'),                              # puncuation characters
-        ('SLCOMMENT',   r'//[^\n]*'),                                # single-line comment  //
+        ('SLCOMMENT',   '//[^' + _LINE_BREAKS + ']*'),               # single-line comment  //
         ('MLCOMMENT',   r'/\*(?:\*[^/]|[^*])*\*/'),                  # multi-line comment  /*  */
-        ('NEWLINE',     r'\n'),                                      # newline
-        ('WHITESPACE',  r'[^\S\n]+'),                                # whitespace
+        ('NEWLINE',     _line_break.pattern),                        # newline
+        ('WHITESPACE',  r'[^\S' + _LINE_BREAKS + ']+'),              # whitespace
         ('UNKNOWN',     r'.'),                                       # Any other character
     ]
     # join regexes
@@ -226,11 +236,11 @@ def _tokenize_string(file_string):
         yield _colorise_token(kind, value, line, column)
 
         # compute new line and column
-        last_line_length = len(value) - value.rfind('\n') - 1
-        column += last_line_length
-        if '\n' in value:
-            column = last_line_length + 1
-        line += value.count('\n')
+        # only these token kinds can hold a line break
+        if kind in ('NEWLINE', 'STRING', 'MLCOMMENT'):
+            line, column = _advance(line, column, value)
+        else:
+            column += len(value)
 
     # extra special end of file token
     yield _colorise_token('EOF', ' ', line, column)
@@ -298,9 +308,9 @@ def loads(file_string, file_source=''):
     _warnings = []
     _file_source = file_source
 
-    file_string = file_string.rstrip('\n')
+    # split for the line numbers and the preview only: a string keeps its line breaks
+    file_string = file_string.rstrip(_LINE_BREAKS)
     _file_lines = file_string.splitlines()
-    file_string = '\n'.join(_file_lines)
 
     try:
         tokens = list(_tokenize_string(file_string))
